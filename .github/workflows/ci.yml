@@ -28,9 +28,10 @@ jobs:
           DATABASE_URL: sqlite:///./test.db
           REDIS_URL: redis://localhost:6379/0
           ENCRYPTION_KEY: a1_B2-C3_D4-E5_F6-G7_H8-I9_J0-K1_L2-M3_N4=
+          PYTHONPATH: .
         run: |
           cd backend
-          pytest -v
+          python -m pytest -v
 
   frontend-check:
     runs-on: ubuntu-latest
