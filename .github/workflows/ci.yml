@@ -53,7 +53,7 @@ jobs:
       - name: Typecheck Next.js
         run: |
           cd frontend
-          npx tsc --noEmit
+          npm run typecheck
 
   docker-build:
     runs-on: ubuntu-latest
