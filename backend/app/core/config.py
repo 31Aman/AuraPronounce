@@ -51,6 +51,12 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    def __init__(self, **values):
+        super().__init__(**values)
+        if self.REDIS_URL.startswith("rediss://") and "ssl_cert_reqs" not in self.REDIS_URL:
+            sep = "&" if "?" in self.REDIS_URL else "?"
+            self.REDIS_URL += f"{sep}ssl_cert_reqs=CERT_NONE"
+
 
 settings = Settings()
 
