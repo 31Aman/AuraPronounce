@@ -1,14 +1,10 @@
 import hashlib
 import os
+import subprocess
+import tempfile
 import soundfile as sf
 import numpy as np
-import librosa
-import warnings
 from typing import Tuple, Optional
-
-# Suppress librosa file format and deprecation warnings to keep logs clean
-warnings.filterwarnings("ignore", category=UserWarning, module="librosa")
-warnings.filterwarnings("ignore", category=FutureWarning, module="librosa")
 
 
 class AudioValidationError(Exception):
@@ -78,12 +74,42 @@ class AudioValidator:
         return sha256.hexdigest()
 
     @staticmethod
-    def validate_audio_content(file_path: str) -> Tuple[float, float, float]:
-        """Reads audio and returns (duration, rms_energy_db, snr).
-        Raises AudioValidationError if validation fails."""
+    def convert_to_wav(file_path: str) -> str:
+        """Converts any audio file to a standard 16kHz mono WAV file using ffmpeg."""
+        temp_wav = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        temp_wav.close()
+        
         try:
-            # Load audio for acoustic features and duration using librosa (handles WebM, MP3, M4A via ffmpeg)
-            y, sr = librosa.load(file_path, sr=16000)
+            subprocess.run([
+                "ffmpeg", "-y", "-i", file_path, 
+                "-ar", "16000", "-ac", "1", temp_wav.name
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            return temp_wav.name
+        except Exception as e:
+            if os.path.exists(temp_wav.name):
+                os.unlink(temp_wav.name)
+            raise AudioValidationError(f"FFmpeg audio conversion failed: {e}")
+
+    @staticmethod
+    def validate_audio_content(file_path: str) -> Tuple[float, float, float]:
+        """Reads audio and returns (duration, rms_energy_db, snr) using soundfile and numpy."""
+        wav_path = None
+        try:
+            # 1. Try reading the file directly
+            try:
+                y, sr = sf.read(file_path)
+                if len(y.shape) > 1:
+                    y = np.mean(y, axis=1)
+                # If sample rate is different, convert it via ffmpeg to be safe
+                if sr != 16000:
+                    raise ValueError("Needs resampling")
+            except Exception:
+                # 2. Fall back to converting via ffmpeg
+                wav_path = AudioValidator.convert_to_wav(file_path)
+                y, sr = sf.read(wav_path)
+                if len(y.shape) > 1:
+                    y = np.mean(y, axis=1)
+
             duration = float(len(y) / sr)
             
             # Enforce 30 to 45 seconds
@@ -92,27 +118,32 @@ class AudioValidator:
                     f"Audio duration must be between 30 and 45 seconds. Got {duration:.2f} seconds."
                 )
             
-            # 1. Silence check
-            # Calculate RMS energy of each frame
-            rms = librosa.feature.rms(y=y)[0]
+            # 3. Calculate RMS energy using numpy sliding window
+            frame_length = 2048
+            hop_length = 512
+            rms = []
+            for i in range(0, len(y) - frame_length, hop_length):
+                frame = y[i:i+frame_length]
+                rms.append(np.sqrt(np.mean(frame**2) + 1e-6))
+            
+            rms = np.array(rms)
+            if len(rms) == 0:
+                raise AudioValidationError("Audio file is empty or corrupted.")
+
             avg_rms_db = 20 * np.log10(np.mean(rms) + 1e-6)
             
-            # If average energy is below -45dB, it's considered silent
             if avg_rms_db < -45.0:
                 raise AudioValidationError("Audio is silent or has extremely low volume. Please check your microphone.")
 
-            # 2. Noise Check (estimate Signal to Noise Ratio)
-            # Estimate noise floor using the 10th percentile of frame energy
+            # Noise Check (estimate Signal to Noise Ratio)
             noise_floor_rms = np.percentile(rms, 10) + 1e-6
             speech_rms = np.percentile(rms, 90) + 1e-6
             snr = 20 * np.log10(speech_rms / noise_floor_rms)
             
-            # Extremely noisy audio (e.g. pure static/microphone hiss) will have low SNR
             if snr < 8.0:
                 raise AudioValidationError("Audio has too much background noise. Please record in a quieter environment.")
 
-            # 3. Flatline / corruption check
-            # Check if there is variation in the signal
+            # Flatline check
             if np.std(y) < 1e-4:
                 raise AudioValidationError("Audio data appears corrupted or flatlined.")
 
@@ -122,3 +153,9 @@ class AudioValidator:
             raise
         except Exception as e:
             raise AudioValidationError(f"Invalid or corrupted audio file structure: {str(e)}")
+        finally:
+            if wav_path and os.path.exists(wav_path):
+                try:
+                    os.unlink(wav_path)
+                except Exception:
+                    pass

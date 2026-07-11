@@ -317,9 +317,9 @@ class AIPipelineService:
         )
         
         words_list = ref.split()
-        import librosa
+        import soundfile as sf
         try:
-            duration = float(librosa.get_duration(path=file_path))
+            duration = float(sf.info(file_path).duration)
         except Exception:
             duration = float(len(words_list) * 0.4)
 
