@@ -14,6 +14,10 @@ except subprocess.CalledProcessError as e:
     print(f"Database initialization failed: {e}")
     sys.exit(1)
 
+# Create shared environment with PYTHONPATH explicitly set to prevent ModuleNotFoundError
+env = os.environ.copy()
+env["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
+
 # 2. Spawn Celery Worker
 print("Starting Celery background worker...")
 celery_args = [
@@ -24,7 +28,7 @@ celery_args = [
     "--concurrency=1",
     "--pool=solo"
 ]
-celery_proc = subprocess.Popen(celery_args, stdout=sys.stdout, stderr=sys.stderr)
+celery_proc = subprocess.Popen(celery_args, stdout=sys.stdout, stderr=sys.stderr, env=env)
 
 # 3. Spawn Uvicorn API Server
 port = os.environ.get("PORT", "8000")
@@ -35,7 +39,7 @@ uvicorn_args = [
     "--host", "0.0.0.0", 
     "--port", port
 ]
-uvicorn_proc = subprocess.Popen(uvicorn_args, stdout=sys.stdout, stderr=sys.stderr)
+uvicorn_proc = subprocess.Popen(uvicorn_args, stdout=sys.stdout, stderr=sys.stderr, env=env)
 
 # 4. Monitor processes
 try:
