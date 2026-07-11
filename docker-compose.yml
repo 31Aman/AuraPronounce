@@ -1,0 +1,98 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: pronunciation_db
+    restart: always
+    environment:
+      POSTGRES_DB: pronunciation_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pronunciation_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: pronunciation_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pronunciation_api
+    restart: always
+    command: >
+      sh -c "python -m app.db_init && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/pronunciation_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=supersecretkeychangeinproduction1234567890!@#
+      - ALGORITHM=HS256
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - ENCRYPTION_KEY=a1_B2-C3_D4-E5_F6-G7_H8-I9_J0-K1_L2-M3_N4=
+      - DATA_RESIDENCY_REGION=ap-south-1
+      - RATE_LIMIT_PER_MINUTE=30
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - uploads_volume:/app/uploads
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pronunciation_celery
+    restart: always
+    command: celery -A app.worker.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/pronunciation_db
+      - REDIS_URL=redis://redis:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - ENCRYPTION_KEY=a1_B2-C3_D4-E5_F6-G7_H8-I9_J0-K1_L2-M3_N4=
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - uploads_volume:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+    container_name: pronunciation_frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
+  uploads_volume:

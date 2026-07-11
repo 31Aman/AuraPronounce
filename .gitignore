@@ -1,0 +1,26 @@
+# Secrets
+.env
+.env*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Node/Next.js
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# OS/IDEs
+.DS_Store
+.vscode/
+.idea/

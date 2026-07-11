@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 224 71% 4%;
+  --foreground: 210 20% 98%;
+  
+  --card: 224 71% 6%;
+  --card-foreground: 210 20% 98%;
+  
+  --primary: 263.4 90% 50.4%; /* Glowing Violet */
+  --primary-foreground: 210 20% 98%;
+  
+  --secondary: 215 27.9% 16.9%;
+  --muted: 215 27.9% 10.9%;
+  --muted-foreground: 215 20.2% 65.1%;
+  
+  --border: 215 27.9% 16.9%;
+  --radius: 0.75rem;
+  
+  --success: 142.1 76.2% 36.3%;
+  --warning: 38 92% 50%;
+  --destructive: 0 84.2% 60.2%;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  overflow-x: hidden;
+}
+
+/* Custom premium design classes */
+.glass-panel {
+  background: rgba(10, 15, 30, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card-hover:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 0 25px rgba(124, 58, 237, 0.15);
+  transform: translateY(-2px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.text-glow-primary {
+  text-shadow: 0 0 20px rgba(124, 58, 237, 0.6);
+}
+
+.bg-grid-pattern {
+  background-image: radial-gradient(rgba(124, 58, 237, 0.15) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.radial-blur-glow {
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, rgba(37, 99, 235, 0.05) 50%, transparent 100%);
+}
+
+/* Custom animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
