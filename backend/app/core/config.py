@@ -55,7 +55,18 @@ class Settings(BaseSettings):
         super().__init__(**values)
         if self.REDIS_URL.startswith("rediss://") and "ssl_cert_reqs" not in self.REDIS_URL:
             sep = "&" if "?" in self.REDIS_URL else "?"
-            self.REDIS_URL += f"{sep}ssl_cert_reqs=CERT_NONE"
+            self.REDIS_URL += f"{sep}ssl_cert_reqs=none"
+
+    @property
+    def CELERY_REDIS_URL(self) -> str:
+        url = self.REDIS_URL
+        if url.startswith("rediss://"):
+            if "ssl_cert_reqs=none" in url:
+                return url.replace("ssl_cert_reqs=none", "ssl_cert_reqs=CERT_NONE")
+            elif "ssl_cert_reqs" not in url:
+                sep = "&" if "?" in url else "?"
+                return url + f"{sep}ssl_cert_reqs=CERT_NONE"
+        return url
 
 
 settings = Settings()
