@@ -15,6 +15,9 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download NLTK corpora to prevent runtime download delays and wake-up timeouts
+RUN python -c "import nltk; nltk.download('averaged_perceptron_tagger', download_dir='/usr/share/nltk_data'); nltk.download('cmudict', download_dir='/usr/share/nltk_data')"
+
 # Copy source code
 COPY . .
 
