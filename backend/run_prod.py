@@ -20,7 +20,9 @@ celery_args = [
     sys.executable, "-m", "celery", 
     "-A", "app.worker.celery_app", 
     "worker", 
-    "--loglevel=info"
+    "--loglevel=info",
+    "--concurrency=1",
+    "--pool=solo"
 ]
 celery_proc = subprocess.Popen(celery_args, stdout=sys.stdout, stderr=sys.stderr)
 
