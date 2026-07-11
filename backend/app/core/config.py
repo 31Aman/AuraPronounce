@@ -73,3 +73,11 @@ settings = Settings()
 
 # Ensure upload directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+
+# Configure NLTK data path to find pre-downloaded corpora in production/local builds
+import nltk
+base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+nltk_data_dir = os.path.join(base_dir, "nltk_data")
+os.makedirs(nltk_data_dir, exist_ok=True)
+nltk.data.path.append(nltk_data_dir)
+
